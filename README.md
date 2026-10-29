@@ -29,7 +29,7 @@ hf jobs uv run inference/curate.py -- --dataset HuggingFaceFW/fineweb-edu --conf
     --limit 10000 --out-repo YOUR_NAME/fineweb-edu-curated
 ```
 
-The script's PEP 723 header carries the Job settings (`[tool.hf-jobs]`: `l4x1` GPU, 1-hour timeout, your `HF_TOKEN`
+The script's PEP 723 header carries the Job settings (`[tool.hf-jobs]`: `a10g-small` GPU, 1-hour timeout, your `HF_TOKEN`
 to push the result), so the command needs only the script's own arguments. Flags such as `--flavor rtx-pro-6000`
 override the header.
 

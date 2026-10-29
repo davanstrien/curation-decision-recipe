@@ -5,7 +5,7 @@
 #
 # # Defaults for `hf jobs uv run`; command-line flags override them.
 # [tool.hf-jobs]
-# flavor = "l4x1"
+# flavor = "a10g-small"
 # timeout = "1h"
 # secrets = ["HF_TOKEN"]
 # ///
