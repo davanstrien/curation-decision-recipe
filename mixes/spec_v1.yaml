@@ -1,0 +1,18 @@
+# Release recipe v1 (2026-10-27): base = third-party labels; cur-tp v5 + Harvard
+# modern catalogue rows (CUR6) + DecisionBank-260k rows (scripts/db_build.py). 12k steps, 3 seeds, then an encoder-only
+# soup + head-only tune. Controls at equal steps: cur5-db12k-s{0,1,2} (no Harvard), cur5-tp12k-s{0,1,2}.
+name: cur-cand
+seed: 0
+total_rows: 0                 # caps only
+exclude_evals: /c/evals/v3
+licence_classes: [permissive, sa, publisher]
+sources:
+  - {path: /c/sources/base-r1g/v1, files: [base.jsonl], cap: 200000}
+  - {path: /c/sources/procpile/v1, files: [procpile_gl.jsonl], cap: 1000000}
+  - {path: /c/sources/tool/v1, files: [tool_gl.jsonl], cap: 1000000}
+  - {path: /c/sources/fh-arxiv/v1, files: [fh_arxiv_gl.jsonl], cap: 1000000}
+  - {path: /c/sources/nls/v1, files: [nls_gl.jsonl], cap: 1000000}
+  - {path: /c/sources/web-slice-tpm/v1, files: [web_tpm_decision.jsonl], cap: 1000000}
+  - {path: /c/sources/prompt-slice-tpm/v1, files: [prompt_tpm_decision.jsonl], cap: 1000000}
+  - {path: /c/sources/harvard-modern/v1, files: [harvard_modern_decision.jsonl], cap: 1000000}
+  - {path: /c/sources/decisionbank/v1, files: [decisionbank_decision.jsonl], cap: 1000000}
