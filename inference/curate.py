@@ -2,6 +2,12 @@
 # requires-python = ">=3.11"
 # dependencies = ["gliclass>=0.1.21", "torch", "transformers>=5.20", "kernels>=0.17.2,<0.18", "numpy",
 #                 "datasets>=4", "huggingface_hub>=1.32"]
+#
+# # Defaults for `hf jobs uv run`; command-line flags override them.
+# [tool.hf-jobs]
+# flavor = "l4x1"
+# timeout = "1h"
+# secrets = ["HF_TOKEN"]
 # ///
 """Curate a Hub dataset with davanstrien/ultrabert-380m-curation in one command on Hugging Face Jobs.
 
@@ -11,8 +17,7 @@ value, reasoning depth), and pushes a dataset repo with two configs: `scored` (e
 or incomplete). Needs a CUDA GPU from the Ampere generation or newer (l4x1, a10g, a100, rtx-pro-6000; not t4).
 
     hf download davanstrien/ultrabert-380m-curation curate.py --local-dir .
-    hf jobs uv run --flavor l4x1 --timeout 1h -s HF_TOKEN curate.py -- \\
-        --dataset HuggingFaceFW/fineweb-edu --config sample-10BT --text-column text \\
+    hf jobs uv run curate.py -- --dataset HuggingFaceFW/fineweb-edu --config sample-10BT --text-column text \\
         --limit 10000 --out-repo YOUR_NAME/fineweb-edu-curated
 
 The model was trained on web text cut at 3,000 characters, so only the first 3,000 characters of each row are
@@ -20,8 +25,8 @@ scored. The pushed rows keep their full text and every other column.
 """
 
 import argparse
+import importlib.util
 import itertools
-import os
 import sys
 import time
 
@@ -61,6 +66,16 @@ def load_rows(args):
     if args.limit:
         stream = itertools.islice(stream, args.limit)
     return list(stream)
+
+
+def load_fast_scorer():
+    """Import FastScorer from fast_inference.py in the model repo (a single file, not a pip package)."""
+    path = hf_hub_download(MODEL, "fast_inference.py")
+    spec = importlib.util.spec_from_file_location("fast_inference", path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["fast_inference"] = module  # registered by name, as a normal import would be
+    spec.loader.exec_module(module)
+    return module.FastScorer(MODEL)  # loads, fuses and compiles the model (about a minute)
 
 
 def answer_columns(scorer, texts):
@@ -104,10 +119,7 @@ def main():
         sys.exit(f"column {args.text_column!r} not found; columns: {list(rows[0])}")
     print(f"read {len(rows):,} rows in {time.time() - start:.0f}s")
 
-    sys.path.insert(0, os.path.dirname(hf_hub_download(MODEL, "fast_inference.py")))
-    from fast_inference import FastScorer
-
-    scorer = FastScorer(MODEL)
+    scorer = load_fast_scorer()
     texts = [r[args.text_column] or "" for r in rows]
     cols = {}
     t0 = time.time()

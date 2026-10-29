@@ -9,7 +9,8 @@ One parquet per config (source group), under data/<config>/. Release rules:
   (analysis/release/base_licence_map.json); drop GPL, unresolved and no-licence rows. Fill `licence` per row.
 - web: page text is not redistributed; `state` is set to "" and `source_dataset` / `source_row` point at the
   source row (train split) so the text can be rebuilt.
-- nested fields (state when it is a record, question, target, true_labels) are stored as JSON strings.
+- nested fields (state when it is a record, question, target, true_labels) are stored as JSON strings;
+  `state_is_record` says whether a decision row's state was a record (dict or list) or text.
 usage (CPU Job, dm-curation mounted at /c): python release_build.py --repo YOUR_NAME/<name> [--dry-run]
 """
 
@@ -40,7 +41,7 @@ BASE_CLASS = {"permissive": "permissive", "sa": "sa", "other_open": "other_open"
 WEB_SOURCE = {"cur-wo-topic-": "WebOrganizer/TopicAnnotations-Llama-3.1-405B-FP8",
               "cur-wo-format-": "WebOrganizer/FormatAnnotations-Llama-3.1-405B-FP8",
               "cur-fwe-": "HuggingFaceFW/fineweb-edu-llama3-annotations"}
-COLUMNS = ["id", "config", "src", "row_type", "teacher", "licence_class", "licence", "state", "question", "target",
+COLUMNS = ["id", "config", "src", "row_type", "teacher", "licence_class", "licence", "state", "state_is_record", "question", "target",
            "text", "all_labels", "true_labels", "prompt", "multi_label", "source_dataset", "source_row"]
 
 
@@ -52,6 +53,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo", required=True)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--create-pr", action="store_true", help="upload as a pull request to the dataset repo")
     args = ap.parse_args()
 
     licmap = json.loads(LICMAP.read_text())
@@ -96,6 +98,7 @@ def main():
                 "id": r["id"], "config": config, "src": r.get("src"), "row_type": row_type,
                 "teacher": r.get("teacher"), "licence_class": licence_class, "licence": licence,
                 "state": state if state is None or isinstance(state, str) else as_json(state),
+                "state_is_record": isinstance(state, (dict, list)) if row_type == "decision" else None,
                 "question": as_json(r.get("question")), "target": as_json(r.get("target")),
                 "text": r.get("text"), "all_labels": r.get("all_labels"),
                 "true_labels": as_json(r.get("true_labels")), "prompt": r.get("prompt"),
@@ -114,6 +117,7 @@ def main():
     schema = {c: pl.Utf8 for c in COLUMNS}
     schema["all_labels"] = pl.List(pl.Utf8)
     schema["multi_label"] = pl.Boolean
+    schema["state_is_record"] = pl.Boolean
     schema["source_row"] = pl.Int64
     print(json.dumps(dict(sorted(stats.items())), indent=1))
     print("dropped keys (not released):", dict(extra_keys))
@@ -134,8 +138,9 @@ def main():
             pl.DataFrame(rs, schema=schema).write_parquet(p / "train.parquet")
         (Path(d) / "release_stats.json").write_text(json.dumps(dict(sorted(stats.items())), indent=1))
         api.upload_folder(repo_id=args.repo, repo_type="dataset", folder_path=d,
-                          commit_message="Add release build of the cur-cand v1 training mix")
-    print("uploaded", api.list_repo_files(args.repo, repo_type="dataset"))
+                          commit_message="Add release build of the cur-cand v1 training mix",
+                          create_pr=args.create_pr)
+    print("uploaded", args.repo)
 
 
 if __name__ == "__main__":
