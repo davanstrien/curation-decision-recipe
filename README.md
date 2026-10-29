@@ -8,7 +8,7 @@ educational value, difficulty, …) and it returns a probability for every optio
 This repo is mostly about the **data**. Small decision models live or die by their training data, and few releases
 say how that data was built. This one shows every source, labeller, licence check, audit and screening step that went
 into the [training mix](https://huggingface.co/datasets/davanstrien/curation-decision-mix), and the scripts that did
-it. If you train decision models, please publish your data recipe too.
+it. If you train decision models, please publish your data recipe too!
 
 Everything ran on [Hugging Face Jobs](https://huggingface.co/docs/huggingface_hub/guides/jobs), with sources, mixes,
 evals and checkpoints in Hugging Face storage buckets mounted into each job.
