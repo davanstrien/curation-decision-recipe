@@ -57,22 +57,21 @@ That command scored 1,020,000 FineWeb pages in about 19 minutes for about $5
 
 [`data/release_to_jsonl.py`](data/release_to_jsonl.py) converts the
 [released dataset](https://huggingface.co/datasets/davanstrien/curation-decision-mix) to the trainer's input, and
-[`train/gliclass_ub_train.py`](train/gliclass_ub_train.py) trains on one GPU Job in the published training image
-(`hf.co/spaces/davanstrien/ub-train-image`, built from [`image/Dockerfile`](image/Dockerfile)):
+[`train/gliclass_ub_train.py`](train/gliclass_ub_train.py) trains on one GPU Job. Both are uv scripts whose
+`[tool.hf-jobs]` headers set the hardware, so each step is one command. A bucket mounted at `/b` carries the data
+from the first Job to the second, and the trainer syncs its outputs to `--out-bucket`:
 
 ```bash
 hf buckets create YOUR_NAME/curation-train
-hf buckets cp data/release_to_jsonl.py hf://buckets/YOUR_NAME/curation-train/release_to_jsonl.py
-hf buckets cp train/gliclass_ub_train.py hf://buckets/YOUR_NAME/curation-train/gliclass_ub_train.py
-hf jobs run --flavor rtx-pro-6000 --timeout 2h -s HF_TOKEN -v hf://buckets/YOUR_NAME/curation-train:/b \
-    hf.co/spaces/davanstrien/ub-train-image -- bash -c "python /b/release_to_jsonl.py --out /tmp/mix.jsonl && \
-    python /b/gliclass_ub_train.py --run-name seed0 --seed 0 --encoder dmis-lab/UltraBERT-380M --train /tmp/mix.jsonl \
-      --single-label-loss softmax_ce --encoder-lr 2e-5 --others-lr 4e-5 --max-steps 12000 --save-model --no-trackio \
-      --out-bucket hf://buckets/YOUR_NAME/curation-train/runs"
+hf jobs uv run -v hf://buckets/YOUR_NAME/curation-train:/b data/release_to_jsonl.py -- --out /b/mix.jsonl
+hf jobs uv run -v hf://buckets/YOUR_NAME/curation-train:/b train/gliclass_ub_train.py -- \
+    --run-name seed0 --seed 0 --encoder dmis-lab/UltraBERT-380M --train /b/mix.jsonl \
+    --single-label-loss softmax_ce --encoder-lr 2e-5 --others-lr 4e-5 --max-steps 12000 --save-model --no-trackio \
+    --out-bucket hf://buckets/YOUR_NAME/curation-train/runs
 ```
 
-One run takes about an hour (about $3). Add `--max-steps 50` first to check the setup (tested: converts, trains and
-saves in a few minutes). This trains on the 475,074 released rows that carry their text; the release model also saw
+One run takes about an hour (about $3). Run with `--max-steps 50` first to check the setup (tested on `rtx-pro-6000`:
+the Job installs its packages, trains and saves in a few minutes). This trains on the 475,074 released rows that carry their text; the release model also saw
 the `web` rows (rebuild their text, see the dataset card) and 18,766 base rows that are not released. For the
 release model, train seeds 0, 1 and 2 and follow the averaging steps under [Training](#training).
 
@@ -115,11 +114,13 @@ The trainer uses the [GLiClass](https://github.com/Knowledgator/GLiClass) librar
 data processing, and follows the configuration of Knowledgator's
 [gliclass-v4-edge](https://huggingface.co/knowledgator/gliclass-v4-edge). It has its own training loop instead of
 GLiClass's `Trainer`; the docstring at the top of the file lists each difference and why. One run takes about an hour on one
-RTX PRO 6000 (peak GPU memory about 55 GB). `image/Dockerfile` is the training image (it also contains evaluation
-dependencies).
+RTX PRO 6000 (peak GPU memory about 55 GB). For many runs, `image/Dockerfile` builds an image with the same packages
+preinstalled (plus the evaluation dependencies), published as `hf.co/spaces/davanstrien/ub-train-image`; the original
+runs used it, through `train/cur_train.sh`. The uv header pins the same versions, and throughput is the same (about
+50K tokens/s on `rtx-pro-6000`); the image only saves the few minutes of package installation per Job.
 
-The release runs used an earlier revision of `gliclass_ub_train.py` (sha256 `a041428e…`). The file here adds two
-opt-in options, `--save-every` (periodic checkpoints) and `--dev-holdout` (a dev split); with the defaults, training is
+The release runs used an earlier revision of `gliclass_ub_train.py` (sha256 `a041428e…`). The file here adds a uv
+script header and two opt-in options, `--save-every` (periodic checkpoints) and `--dev-holdout` (a dev split); with the defaults, training is
 unchanged (checked at the time: identical training losses). GPU training is not bit-for-bit deterministic.
 
 ## Evaluation

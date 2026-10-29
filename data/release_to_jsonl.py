@@ -1,6 +1,11 @@
 # /// script
 # requires-python = ">=3.11"
 # dependencies = ["polars", "huggingface_hub>=1.32"]
+#
+# # Defaults for `hf jobs uv run`; command-line flags override them.
+# [tool.hf-jobs]
+# flavor = "cpu-upgrade"
+# timeout = "30m"
 # ///
 """Convert the released dataset (davanstrien/curation-decision-mix) to the trainer's JSONL input.
 

@@ -1,3 +1,14 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["torch==2.11.0", "numpy>=2", "gliclass==0.1.21", "transformers==5.20.2", "kernels==0.17.2",
+#                 "huggingface_hub>=1.32", "polars", "trackio==0.43.0"]
+#
+# # Defaults for `hf jobs uv run`; command-line flags override them.
+# [tool.hf-jobs]
+# flavor = "rtx-pro-6000"
+# timeout = "2h"
+# secrets = ["HF_TOKEN"]
+# ///
 """Train a GLiClass uni-encoder on an UltraBERT backbone (gliclass 0.1.21 model classes and data processing).
 
 Recipe (knowledgator/gliclass-v4-edge config, runs/gliclass_v4_recipe_research.md):

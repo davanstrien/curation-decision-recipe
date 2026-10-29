@@ -25,10 +25,11 @@ Compute runs on [Hugging Face Jobs](https://huggingface.co/docs/huggingface_hub/
 launches. Inputs and outputs live in Hub datasets or storage buckets, mounted into the Job with `-v`.
 
 - Scripts with a `# /// script` header run with `hf jobs uv run script.py -- <args>`. A `[tool.hf-jobs]` table in
-  the header (as in `inference/curate.py`) sets the flavor, timeout and secrets; otherwise pass them as flags
+  the header sets the flavor, timeout and secrets; otherwise pass them as flags
   (`--flavor l4x1 -s HF_TOKEN`). Put `--` before the script's arguments, or `hf` may take flags such as `--dry-run`
   for itself.
-- Scripts without that header run in the training image:
+- `inference/curate.py`, `data/release_to_jsonl.py` and `train/gliclass_ub_train.py` carry `[tool.hf-jobs]` headers.
+  Record scripts without a header ran in the training image:
   `hf jobs run --flavor rtx-pro-6000 -s HF_TOKEN -v hf://buckets/<you>/<bucket>:/b hf.co/spaces/davanstrien/ub-train-image -- python /b/<script>.py ...`
 - The datatrove example is the exception: run it on your machine with `uv run --python 3.12 ...`; it launches the
   Jobs itself.
